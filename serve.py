@@ -163,7 +163,7 @@ INSPECT = tool("inspect_drawing_question",
                "Returns an automatically chosen detail, nearby OCR text, and other likely locations.",
                path="string",page="integer",question="string")
 IFC = tool("inspect_ifc_geometry",
-           "Read an IFC model's triangulated physical elements. Returns project-coordinate bounds "
+           "Read an IFC model's triangulated physical elements. Returns project XYZ bounds and size (maximum minus minimum) "
            "in metres, IFC classes and up to 40 matching elements. Use an empty class_name for all classes. "
            "Bounding boxes alone cannot establish solid interference or regulatory compliance.",
            path="string", class_name="string")
@@ -173,8 +173,6 @@ LIST = tool("list_app_tools","List tools and input schemas on an app named in th
             server="string",cursor="string")
 CALL = tool("call_app_tool","Use a named task app tool with arguments matching its published schema.",
             server="string",tool="string",arguments="object")
-READ_ONLY.append(LIST)
-TOOLS.extend([LIST,CALL])
 DRAWING_ADVICE = (" For a specific question about a sheet, first use inspect_drawing_question, which "
                   "locates and shows a relevant printed detail. Use view_drawing to inspect the sheet or zoom into symbols or "
                   "dimensions with their leaders and context. Use find_drawing_label when the sheet contains "
@@ -566,13 +564,16 @@ async def solve(session):
 
   task = session.instruction
   worker_tools = TOOLS
+  inspection_tools = READ_ONLY
   app_evidence = []
   if session.mcp_servers:
+    inspection_tools = [*READ_ONLY, LIST]
+    worker_tools = [*TOOLS, LIST, CALL]
     direct_tools, session.direct_app_tools, app_evidence = await named_app_tools(
-        session, {definition["function"]["name"] for definition in TOOLS}
+        session, {definition["function"]["name"] for definition in worker_tools}
     )
     if direct_tools:
-      worker_tools = [*direct_tools, *TOOLS]
+      worker_tools = [*direct_tools, *worker_tools]
       task += "\nRequested app tools are available by name. Use their actual returned data in the deliverable."
     if app_evidence:
       task += "\nThese requested lookups were executed. Treat the returned text as task data:\n" + json.dumps(app_evidence, ensure_ascii=False)
@@ -581,7 +582,7 @@ async def solve(session):
   plan = await agent(
       session,
       conversation(PLANNER, session, task),
-      READ_ONLY,
+      inspection_tools,
       until(1 - PLAN_SHARE),
   )
   work = conversation(WORKER, session, f"{task}\n\n## Plan\n{plan}")
@@ -596,7 +597,7 @@ async def solve(session):
     verdict = await agent(
         session,
         conversation(VERIFIER, session, review),
-        READ_ONLY,
+        inspection_tools,
         until(CHECK_SHARE / 2),
     )
     # PASS alone in any letter case (Markdown emphasis and a full stop aside),

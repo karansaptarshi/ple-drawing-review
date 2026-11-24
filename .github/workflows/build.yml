@@ -11,7 +11,7 @@ jobs:
       - name: Check out the entry
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
       - name: Get the organizer's public evaluation kit
         env:
@@ -25,6 +25,7 @@ jobs:
       - name: Validate and build with the official kit
         run: |
           set -euo pipefail
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse --is-shallow-repository)" = false
           cd "$RUNNER_TEMP/ple-kit"
           python3 -m venv "$RUNNER_TEMP/kit-env"
           "$RUNNER_TEMP/kit-env/bin/pip" --disable-pip-version-check --quiet install pyyaml websockets python-dotenv 'huggingface-hub>=1.31,<2'

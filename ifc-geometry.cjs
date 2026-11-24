@@ -13,6 +13,10 @@ function include(box, xyz) {
   }
 }
 
+function dimensions(box) {
+  return {...box, size: box.high.map((maximum, axis) => maximum - box.low[axis])};
+}
+
 function projectPoint(t, x, y, z) {
   // web-ifc maps IFC's +Z up to rendering +Y up. Convert the placed vertices
   // back to native project axes, leaving length scaling in the mesh transform.
@@ -59,11 +63,11 @@ async function summarize(file, classFilter = "") {
       if (classFilter && type.toLowerCase() !== classFilter.toLowerCase()) return;
       matches++;
       if (elements.length < 40) {
-        elements.push({id:mesh.expressID, type, name:(product.Name?.value ?? '').slice(0,120), ...box});
+        elements.push({id:mesh.expressID, type, name:(product.Name?.value ?? '').slice(0,120), ...dimensions(box)});
       }
     },true);
     return {schema:api.GetModelSchema(model), units:'m', axes:'IFC project XYZ',
-            classes:counts, matches, world:Object.keys(counts).length ? world : null, elements};
+            classes:counts, matches, world:Object.keys(counts).length ? dimensions(world) : null, elements};
   } finally { api.CloseModel(model); }
 }
 

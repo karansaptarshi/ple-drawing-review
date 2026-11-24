@@ -17,4 +17,5 @@ model_api: google-cloud/claude-opus-5-5
 install: >-
   uv venv --python 3.12 /opt/harness/venv
   && uv pip install --python /opt/harness/venv/bin/python -r {src}/requirements.txt
+  && npm ci --prefix {src} --omit=dev --ignore-scripts --no-audit --no-fund
 serve: /opt/harness/venv/bin/python {src}/serve.py

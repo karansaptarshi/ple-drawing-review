@@ -1,3 +1,5 @@
 Drawing Review uses Google's plan-verify sample and taskbridge.py from google-research/ple at commit 8320f0402fdca9f42476607f72bcfd5271cd50c9, licensed under Apache License 2.0. Changes made on 23 November 2026 add PDF search and rendering, image inputs in the model loop, simulated-task MCP tools, and reduced logging. See LICENSE.
 
 The bundled English language data comes from tesseract-ocr/tessdata_fast at commit 87416418657359cb625c412a48b6e1d6d41c29bd and is licensed under the Apache License 2.0. See tessdata/LICENSE.
+
+IFC inspection uses web-ifc 0.0.81, distributed separately by That Open Company under MPL-2.0. npm installs the unmodified package and its license during the build.

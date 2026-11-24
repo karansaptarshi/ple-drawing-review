@@ -37,6 +37,7 @@ import taskbridge
 from drawings import DrawingView, drawing_tool
 from task_apps import app_tool, named_app_tools, verify_literal_export
 from short_drawing import try_short_drawing
+from ifc_inspection import inspect_ifc
 
 MODEL = os.environ["MODEL_NAME"]
 # The model's highest reasoning level: max for Claude, GLM, GPT-6 and
@@ -161,8 +162,13 @@ INSPECT = tool("inspect_drawing_question",
                "Search printed labels on one PDF page for your question, including on scanned drawings. "
                "Returns an automatically chosen detail, nearby OCR text, and other likely locations.",
                path="string",page="integer",question="string")
-READ_ONLY = [*TOOLS[:2], SEARCH, VIEW, INSPECT]
-TOOLS.extend([SEARCH,VIEW,INSPECT])
+IFC = tool("inspect_ifc_geometry",
+           "Read an IFC model's triangulated physical elements. Returns project-coordinate bounds "
+           "in metres, IFC classes and up to 40 matching elements. Use an empty class_name for all classes. "
+           "Bounding boxes alone cannot establish solid interference or regulatory compliance.",
+           path="string", class_name="string")
+READ_ONLY = [*TOOLS[:2], SEARCH, VIEW, INSPECT, IFC]
+TOOLS.extend([SEARCH,VIEW,INSPECT,IFC])
 LIST = tool("list_app_tools","List tools and input schemas on an app named in the task. Empty cursor starts the list.",
             server="string",cursor="string")
 CALL = tool("call_app_tool","Use a named task app tool with arguments matching its published schema.",
@@ -278,6 +284,8 @@ async def run_tool(session, fn):
       }))
     if name in ("list_app_tools","call_app_tool"):
       return clip(await app_tool(session,name,args))
+    if name == "inspect_ifc_geometry":
+      return clip(await inspect_ifc(session, args))
     if name in ("view_drawing","find_drawing_label","inspect_drawing_question"):
       return await drawing_tool(session,name,args)
     if name == "bash":

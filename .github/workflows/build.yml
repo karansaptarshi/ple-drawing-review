@@ -1,0 +1,35 @@
+name: Build the engineering harness
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Check out the entry
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Get the organizer's public evaluation kit
+        env:
+          KIT_REVISION: 5cf736f8b6e6f28eea71cae52de0c3bedaa88fa2
+        run: |
+          set -euo pipefail
+          git -C "$RUNNER_TEMP" init -q ple-kit
+          git -C "$RUNNER_TEMP/ple-kit" fetch -q --depth 1 https://github.com/google-research/ple.git "$KIT_REVISION"
+          git -C "$RUNNER_TEMP/ple-kit" checkout -q --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/ple-kit" rev-parse HEAD)" = "$KIT_REVISION"
+      - name: Validate and build with the official kit
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/ple-kit"
+          python3 -m venv "$RUNNER_TEMP/kit-env"
+          "$RUNNER_TEMP/kit-env/bin/pip" --disable-pip-version-check --quiet install pyyaml websockets python-dotenv 'huggingface-hub>=1.31,<2'
+          "$RUNNER_TEMP/kit-env/bin/python" -m kit validate "$GITHUB_WORKSPACE"
+          df -h .
+          "$RUNNER_TEMP/kit-env/bin/python" -m kit build "$GITHUB_WORKSPACE"
+          docker system df
+          df -h .
